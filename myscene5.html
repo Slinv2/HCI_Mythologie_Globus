@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Mythologie Erde</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        #popup {
+            position: absolute;
+            background: white;
+            color: black;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            pointer-events: none;
+            z-index: 100;
+            max-width: 150px;
+            width: auto;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="popup"></div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+        const width = window.innerWidth, height = window.innerHeight;
+
+        const camera = new THREE.PerspectiveCamera(70, width / height, 0.01, 10);
+        camera.position.z = 1.5;
+
+        const scene = new THREE.Scene();
+
+        // Erde: SphereGeometry
+        const earthGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const textureLoader = new THREE.TextureLoader();
+        const earthTexture = textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            map: earthTexture,
+            bumpMap: earthTexture,
+            bumpScale: 0.05
+        });
+        const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+        scene.add(earthMesh);
+
+        // Licht
+        const light = new THREE.DirectionalLight(0xffffff, 2);
+        light.position.set(5, 3, 5);
+        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Marker Geometrie und Material
+        const markerGeometry = new THREE.SphereGeometry(0.01, 16, 16); 
+        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+
+        // Funktion zur Umwandlung von Lat/Long in 3D-Vektor
+        function latLongToVector3(lat, lon, radius) {
+            const phi = (90 - lat) * Math.PI / 180;
+            const theta = (lon + 180) * Math.PI / 180;
+            return new THREE.Vector3(
+                -radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
+            );
+        }
+
+        // Marker für Berlin
+        const markerBerlin = new THREE.Mesh(markerGeometry, markerMaterial);
+        markerBerlin.position.copy(latLongToVector3(52.52, 13.41, 0.5));
+        scene.add(markerBerlin);
+
+        // Athen
+        const markerAthen = new THREE.Mesh(markerGeometry, markerMaterial);
+        markerAthen.position.copy(latLongToVector3(37.98, 23.73, 0.5));
+        scene.add(markerAthen);
+
+        // Rom
+        const markerRom = new THREE.Mesh(markerGeometry, markerMaterial);
+        markerRom.position.copy(latLongToVector3(41.90, 12.49, 0.5));
+        scene.add(markerRom);
+
+        // Popup
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const popup = document.getElementById('popup');
+
+        // Texte für Popups
+        const popupTexts = {
+            berlin: 'Berlin: Hauptstadt von Deutschland, hier könnten wir über Mythologien schreiben, bspw. griechische Mythologie',
+            athen: 'Athen: Geburtsort der Demokratie und Zentrum der antiken griechischen Kultur',
+            rom: 'Rom: Wie die Stadt Rom entstand, berühmt für seine antiken Bauwerke und das römische Reich'
+        };
+
+        function onClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects([markerBerlin, markerAthen, markerRom]);
+            if (intersects.length > 0) {
+                popup.style.display = 'block';
+                popup.style.left = event.clientX + 'px';
+                popup.style.top = event.clientY + 'px';
+
+                if (intersects[0].object === markerBerlin) {
+                    popup.innerHTML = popupTexts.berlin;
+                } else if (intersects[0].object === markerAthen) {
+                    popup.innerHTML = popupTexts.athen;
+                } else if (intersects[0].object === markerRom) {
+                    popup.innerHTML = popupTexts.rom;
+                }
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+        window.addEventListener('click', onClick);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 0.6;
+        controls.maxDistance = 2;
+
+        function animate() {
+            controls.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
